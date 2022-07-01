@@ -37,17 +37,22 @@ import java.util.regex.Pattern;
  */
 public class ScriptRunner {
 
+  // 系统默认行分隔符
   private static final String LINE_SEPARATOR = System.lineSeparator();
 
+  // 默认分隔符
   private static final String DEFAULT_DELIMITER = ";";
 
+  // 分隔符正则表达式
   private static final Pattern DELIMITER_PATTERN = Pattern.compile("^\\s*((--)|(//))?\\s*(//)?\\s*@DELIMITER\\s+([^\\s]+)", Pattern.CASE_INSENSITIVE);
 
   private final Connection connection;
 
   private boolean stopOnError;
   private boolean throwWarning;
+  // 是否自动提交，默认false
   private boolean autoCommit;
+  // 是否批量执行文件中的SQL语句，默认false，即默认逐条执行文件中的SQL语句
   private boolean sendFullScript;
   private boolean removeCRs;
   private boolean escapeProcessing = true;
@@ -110,12 +115,16 @@ public class ScriptRunner {
   }
 
   public void runScript(Reader reader) {
+    // 设置事务是否自动提交
     setAutoCommit();
 
     try {
+      // 是否一次性批量执行文件中的所有SQL语句
       if (sendFullScript) {
+        // 一次性批量执行文件中的所有SQL语句
         executeFullScript(reader);
       } else {
+        // 逐条执行文件中的所有SQL语句
         executeLineByLine(reader);
       }
     } finally {
@@ -210,20 +219,27 @@ public class ScriptRunner {
 
   private void handleLine(StringBuilder command, String line) throws SQLException {
     String trimmedLine = line.trim();
-    if (lineIsComment(trimmedLine)) {
+    if (lineIsComment(trimmedLine)) { // 判断该行是否是SQL注释
       Matcher matcher = DELIMITER_PATTERN.matcher(trimmedLine);
       if (matcher.find()) {
         delimiter = matcher.group(5);
       }
       println(trimmedLine);
-    } else if (commandReadyToExecute(trimmedLine)) {
+    } else if (commandReadyToExecute(trimmedLine)) { // 判断该行是否包含分号
+      // 获取该行分号之前的内容，追加到当前SQL语句
       command.append(line, 0, line.lastIndexOf(delimiter));
+      // 追加行分隔符
       command.append(LINE_SEPARATOR);
+      // 打印当前SQL语句
       println(command);
+      // 执行当前SQL语句
       executeStatement(command.toString());
+      // 清空SQL语句
       command.setLength(0);
-    } else if (trimmedLine.length() > 0) {
+    } else if (trimmedLine.length() > 0) { // 该行不包含分号，即当前SQL语句未结束
+      // 追加当前行内容
       command.append(line);
+      // 追加行分隔符
       command.append(LINE_SEPARATOR);
     }
   }
