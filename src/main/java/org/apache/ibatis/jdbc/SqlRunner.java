@@ -53,12 +53,13 @@ public class SqlRunner {
   }
 
   /**
-   * Executes a SELECT statement that returns one row.
+   * 执行SELECT查询语句，返回一条数据。
+   * 内部调用的selectAll()方法
    *
-   * @param sql  The SQL
+   * @param sql  SQL语句，语句中可以包含点位符
    * @param args The arguments to be set on the statement.
    * @return The row expected.
-   * @throws SQLException If less or more than one row is returned
+   * @throws SQLException 如果查询结果行数不等于1，会抛出SQLException异常
    */
   public Map<String, Object> selectOne(String sql, Object... args) throws SQLException {
     List<Map<String, Object>> results = selectAll(sql, args);
@@ -78,8 +79,11 @@ public class SqlRunner {
    */
   public List<Map<String, Object>> selectAll(String sql, Object... args) throws SQLException {
     try (PreparedStatement ps = connection.prepareStatement(sql)) {
+      // 为SQL中的参数赋值
       setParameters(ps, args);
+      // 执行查询操作
       try (ResultSet rs = ps.executeQuery()) {
+        // 将查询结果转换为List
         return getResults(rs);
       }
     }
@@ -192,10 +196,12 @@ public class SqlRunner {
       } else if (args[i] instanceof Null) {
         ((Null) args[i]).getTypeHandler().setParameter(ps, i + 1, null, ((Null) args[i]).getJdbcType());
       } else {
+        // 根据参数类型获取对应的类型处理器
         TypeHandler typeHandler = typeHandlerRegistry.getTypeHandler(args[i].getClass());
         if (typeHandler == null) {
           throw new SQLException("SqlRunner could not find a TypeHandler instance for " + args[i].getClass());
         } else {
+          // 调用类型处理器的setParameter()方法设置参数值
           typeHandler.setParameter(ps, i + 1, args[i], null);
         }
       }
@@ -203,10 +209,13 @@ public class SqlRunner {
   }
 
   private List<Map<String, Object>> getResults(ResultSet rs) throws SQLException {
+    // 返回结果
     List<Map<String, Object>> list = new ArrayList<>();
     List<String> columns = new ArrayList<>();
     List<TypeHandler<?>> typeHandlers = new ArrayList<>();
+    // 获取ResultSetMetaData对象
     ResultSetMetaData rsmd = rs.getMetaData();
+    // 遍历获取列名、类型处理器
     for (int i = 0, n = rsmd.getColumnCount(); i < n; i++) {
       columns.add(rsmd.getColumnLabel(i + 1));
       try {
@@ -220,6 +229,7 @@ public class SqlRunner {
         typeHandlers.add(typeHandlerRegistry.getTypeHandler(Object.class));
       }
     }
+    // 遍历ResultSet将SQL执行结果转换成List<Map<String, Object>>，列名小写
     while (rs.next()) {
       Map<String, Object> row = new HashMap<>();
       for (int i = 0, n = columns.size(); i < n; i++) {

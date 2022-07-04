@@ -153,11 +153,13 @@ public class ScriptRunner {
   }
 
   private void executeLineByLine(Reader reader) {
+    // 要执行的SQL语句
     StringBuilder command = new StringBuilder();
     try {
       BufferedReader lineReader = new BufferedReader(reader);
       String line;
       while ((line = lineReader.readLine()) != null) {
+        // 处理每行内容
         handleLine(command, line);
       }
       commitConnection();
